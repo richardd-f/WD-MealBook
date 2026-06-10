@@ -31,10 +31,11 @@ function firstMatch(html, re) {
   return m ? m[1] : null;
 }
 
-function writeParams(token) {
+function writeParams(token, tagName) {
   return {
     headers: { "X-CSRF-TOKEN": token, "X-Requested-With": "XMLHttpRequest" },
-    redirects: 0, // measure the write endpoint itself, not the redirect target
+    redirects: 0,
+    tags: { name: tagName },
   };
 }
 
@@ -68,7 +69,7 @@ export default function () {
     const add = http.post(
       `${BASE}/cart/add/${mealId}`,
       { _token: token },
-      { ...writeParams(token), tags: { name: "POST /cart/add" } }
+      writeParams(token, "POST /cart/add")
     );
     check(add, { "add ok": (r) => r.status === 302 || r.status === 200 });
 
@@ -90,7 +91,7 @@ export default function () {
     const inc = http.post(
       `${BASE}/cart/increment/${itemId}`,
       { _token: token },
-      { ...writeParams(token), tags: { name: "POST /cart/increment" } }
+      writeParams(token, "POST /cart/increment")
     );
     check(inc, { "increment ok": (r) => r.status === 302 || r.status === 200 });
 
@@ -98,7 +99,7 @@ export default function () {
     const dec = http.post(
       `${BASE}/cart/decrement/${itemId}`,
       { _token: token },
-      { ...writeParams(token), tags: { name: "POST /cart/decrement" } }
+      writeParams(token, "POST /cart/decrement")
     );
     check(dec, { "decrement ok": (r) => r.status === 302 || r.status === 200 });
 
@@ -106,7 +107,7 @@ export default function () {
     const del = http.del(
       `${BASE}/cart/remove/${itemId}`,
       JSON.stringify({ _token: token }),
-      { ...writeParams(token), tags: { name: "DELETE /cart/remove" } }
+      writeParams(token, "DELETE /cart/remove")
     );
     check(del, { "remove ok": (r) => r.status === 302 || r.status === 200 });
   });
