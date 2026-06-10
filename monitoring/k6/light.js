@@ -5,7 +5,9 @@ import http from "k6/http";
 import { check } from "k6";
 import { scenarioOptions, baseUrl, makeHandleSummary } from "./lib/common.js";
 
-export const options = scenarioOptions();
+// Light phase only does 1 request per iteration so more VUs are safe.
+// Override the global 10-VU cap to allow proper RPS discovery.
+export const options = scenarioOptions({ maxVUs: 50 });
 
 const BASE = baseUrl();
 

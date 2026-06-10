@@ -16,10 +16,11 @@
 // Override with -e MAX_VUS=N if running against a separate load-test target.
 const MAX_VUS = Number(__ENV.MAX_VUS || 10);
 
-export function scenarioOptions() {
+export function scenarioOptions(overrides) {
+  const cap = (overrides && overrides.maxVUs) ? Math.min(overrides.maxVUs, MAX_VUS * 5) : MAX_VUS;
   const RPS = Number(__ENV.RPS || 0);
   const DURATION = __ENV.DURATION || "30s";
-  const VUS = Math.min(Number(__ENV.VUS || 5), MAX_VUS);
+  const VUS = Math.min(Number(__ENV.VUS || 5), cap);
 
   const thresholds = {
     http_req_duration: [{ threshold: "p(95)<500", abortOnFail: false }],
@@ -27,7 +28,7 @@ export function scenarioOptions() {
   };
 
   if (RPS > 0) {
-    const preAlloc = Math.min(Math.max(VUS, RPS), MAX_VUS);
+    const preAlloc = Math.min(Math.max(VUS, RPS), cap);
     return {
       discardResponseBodies: false,
       thresholds,
@@ -38,7 +39,7 @@ export function scenarioOptions() {
           timeUnit: "1s",
           duration: DURATION,
           preAllocatedVUs: preAlloc,
-          maxVUs: MAX_VUS,
+          maxVUs: cap,
         },
       },
     };
@@ -79,11 +80,14 @@ export function makeHandleSummary(phase) {
     const failed = get("http_req_failed", "rate");
     const f = (v, d = 2) => (v == null ? "n/a" : v.toFixed(d));
 
+    const pass = dur != null && dur < 500;
+    const verdict = dur == null ? "n/a" : (pass ? "✓ PASS" : "✗ FAIL") + " (p95<500ms)";
+
     const line =
       `\n=== ${phase} | target RPS=${__ENV.RPS || "(iter)"} ===\n` +
       `  achieved RPS : ${f(rps)}\n` +
       `  P95 TTFB     : ${f(ttfb)} ms\n` +
-      `  P95 duration : ${f(dur)} ms  (PASS<500)\n` +
+      `  P95 duration : ${f(dur)} ms  ${verdict}\n` +
       `  errors       : ${failed == null ? "n/a" : (failed * 100).toFixed(2) + " %"}\n`;
 
     const out = { stdout: line };
