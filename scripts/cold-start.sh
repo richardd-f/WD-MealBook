@@ -19,14 +19,14 @@ for i in $(seq 1 "$RUNS"); do
   echo "[$i/$RUNS] stopping app + web..."
   docker compose -f "$COMPOSE" stop app web >/dev/null
 
-  start=$(date +%s.%N)
+  start=$(date +%s%3N)  # milliseconds
   docker compose -f "$COMPOSE" up -d --force-recreate app web >/dev/null
 
   ready=0
   while :; do
-    now=$(date +%s.%N)
-    elapsed=$(echo "$now - $start" | bc)
-    if (( $(echo "$elapsed > $TIMEOUT" | bc -l) )); then break; fi
+    now=$(date +%s%3N)
+    elapsed_ms=$(( now - start ))
+    if [ "$elapsed_ms" -ge $(( TIMEOUT * 1000 )) ]; then break; fi
     code=$(docker run --rm --network "$NETWORK" "$CURL_IMG" \
       -s -o /dev/null -w "%{http_code}" --max-time 3 "$URL" 2>/dev/null || true)
     if [ "$code" = "200" ]; then ready=1; break; fi
@@ -34,8 +34,9 @@ for i in $(seq 1 "$RUNS"); do
   done
 
   if [ "$ready" = "1" ]; then
-    printf "    cold start: %.3f s\n" "$elapsed"
-    total=$(echo "$total + $elapsed" | bc)
+    elapsed_s=$(awk "BEGIN {printf \"%.3f\", $elapsed_ms / 1000}")
+    printf "    cold start: %s s\n" "$elapsed_s"
+    total=$(( total + elapsed_ms ))
     count=$((count + 1))
   else
     echo "    timed out after ${TIMEOUT}s"
@@ -43,7 +44,7 @@ for i in $(seq 1 "$RUNS"); do
 done
 
 if [ "$count" -gt 0 ]; then
-  avg=$(echo "scale=3; $total / $count" | bc)
+  avg=$(awk "BEGIN {printf \"%.3f\", $total / $count / 1000}")
   echo ""
   echo "cold_start_seconds (avg of $count): $avg"
 fi

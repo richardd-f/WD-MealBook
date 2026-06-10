@@ -17,11 +17,11 @@ for svc in "${SERVICES[@]}"; do
     continue
   fi
   bytes=$(docker image inspect "$id" --format '{{.Size}}')
-  mb=$(echo "scale=1; $bytes / 1048576" | bc)
+  mb=$(awk "BEGIN {printf \"%.1f\", $bytes / 1048576}")
   total=$((total + bytes))
   printf "  %-6s %8s MB  (%s)\n" "$svc" "$mb" "${id:0:19}"
 done
 
-total_mb=$(echo "scale=1; $total / 1048576" | bc)
+total_mb=$(awk "BEGIN {printf \"%.1f\", $total / 1048576}")
 echo ""
 echo "deployment_size_mb (total): $total_mb"
