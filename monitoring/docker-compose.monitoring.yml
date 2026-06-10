@@ -1,0 +1,105 @@
+# Monitoring & load-testing rig for MealBook benchmarks.
+#
+# This is intentionally SEPARATE from the app's docker-compose.yml so the
+# production deploy is never forced to run it. Bring it up from the repo root:
+#
+#   docker compose -f monitoring/docker-compose.monitoring.yml up -d cadvisor prometheus grafana
+#
+# and run a load phase on demand with the k6 service (see BENCHMARK.md).
+#
+# All services join the existing external `npm_default` network so that:
+#   - prometheus can scrape cadvisor by name
+#   - k6 can reach the app via the `web` (nginx) container by name
+#
+# Note: with this -f path, the compose project root is `monitoring/`, so
+# relative bind mounts below are resolved against that directory.
+
+services:
+  # ---- Resource metrics: CPU / RAM / network per container ----
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: mealbook_cadvisor
+    restart: unless-stopped
+    privileged: true
+    expose:
+      - "8080"
+    ports:
+      - "8081:8080" # cAdvisor's own UI (host 8081 to avoid clashing with app ports)
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - npm_default
+
+  # ---- Time-series store + query engine ----
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: mealbook_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      # Lets k6 (optionally) push HTTP metrics in via remote-write.
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - cadvisor
+    networks:
+      - npm_default
+
+  # ---- Dashboards for RAM idle / peak CPU over each test window ----
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: mealbook_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - npm_default
+
+  # ---- Load generator (run on demand, not always-on) ----
+  # Usage:
+  #   docker compose -f monitoring/docker-compose.monitoring.yml run --rm \
+  #     -e BASE_URL=http://web -e ITERATIONS=10 k6 run /scripts/light.js
+  k6:
+    image: grafana/k6:0.52.0
+    container_name: mealbook_k6
+    # Do not auto-start with `up`; this service is invoked via `run`.
+    profiles: ["loadtest"]
+    environment:
+      # Target the nginx container directly on the shared network.
+      BASE_URL: ${BASE_URL:-http://web}
+      # Optional: push HTTP metrics into Prometheus for the Grafana overlay.
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+    volumes:
+      - ./k6:/scripts:ro
+      - ./results:/results
+    networks:
+      - npm_default
+
+networks:
+  npm_default:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:

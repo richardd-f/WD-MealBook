@@ -1,0 +1,3 @@
+# k6 summaries and per-run CSVs are local benchmark output, not source.
+*
+!.gitignore

@@ -1,0 +1,104 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "MealBook Benchmark",
+  "uid": "mealbook-bench",
+  "tags": ["mealbook", "benchmark"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "5s",
+  "templating": {
+    "list": [
+      {
+        "name": "container",
+        "type": "custom",
+        "label": "Container",
+        "query": "mealbook_app,mealbook_web,mealbook_app|mealbook_web",
+        "current": { "text": "mealbook_app|mealbook_web", "value": "mealbook_app|mealbook_web" },
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Memory usage (RAM) per container",
+      "description": "Idle RAM = read this at rest before a phase. Use the legend min for idle.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["min", "mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "container_memory_usage_bytes{name=~\"$container\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU usage per container (cores)",
+      "description": "Peak CPU = read the legend max over the test window.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "none", "decimals": 3, "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["min", "mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\"$container\"}[1m])",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "RAM idle (current min, app)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["min"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name=\"mealbook_app\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Peak CPU (max over window, app+web)",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 3 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["max"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"mealbook_app|mealbook_web\"}[1m]))", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network RX/TX per container",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "expr": "rate(container_network_receive_bytes_total{name=~\"$container\"}[1m])", "legendFormat": "rx {{name}}", "refId": "A" },
+        { "expr": "rate(container_network_transmit_bytes_total{name=~\"$container\"}[1m])", "legendFormat": "tx {{name}}", "refId": "B" }
+      ]
+    }
+  ]
+}

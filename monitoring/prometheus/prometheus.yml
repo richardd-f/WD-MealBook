@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # cAdvisor exposes per-container CPU / memory / network metrics.
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # Prometheus scrapes itself (useful for sanity checks).
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
