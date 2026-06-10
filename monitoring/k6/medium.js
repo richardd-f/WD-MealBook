@@ -11,7 +11,8 @@ import {
   extractImageUrls,
 } from "./lib/common.js";
 
-export const options = scenarioOptions();
+// Medium phase does parallel batch requests per iteration (safe to allow more VUs).
+export const options = scenarioOptions({ maxVUs: 30 });
 
 const BASE = baseUrl();
 // Cap images fetched per iteration so one fat page can't dominate the run.
