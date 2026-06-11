@@ -67,7 +67,7 @@ export default function () {
     // CREATE
     const add = http.post(
       `${BASE}/cart/add/${mealId}`,
-      { _token: token },
+      null,
       writeParams(token, "POST /cart/add")
     );
     check(add, { "add ok": (r) => r.status === 302 || r.status === 200 });
@@ -89,7 +89,7 @@ export default function () {
     // UPDATE + (qty 1 → 2)
     const inc = http.post(
       `${BASE}/cart/increment/${itemId}`,
-      { _token: token },
+      null,
       writeParams(token, "POST /cart/increment")
     );
     check(inc, { "increment ok": (r) => r.status === 302 || r.status === 200 });
@@ -97,7 +97,7 @@ export default function () {
     // UPDATE - (qty 2 → 1)
     const dec = http.post(
       `${BASE}/cart/decrement/${itemId}`,
-      { _token: token },
+      null,
       writeParams(token, "POST /cart/decrement")
     );
     check(dec, { "decrement ok": (r) => r.status === 302 || r.status === 200 });
@@ -105,7 +105,7 @@ export default function () {
     // DELETE — decrement again (qty 1 → 0), Laravel auto-deletes at 0 (self-cleaning)
     const del = http.post(
       `${BASE}/cart/decrement/${itemId}`,
-      { _token: token },
+      null,
       writeParams(token, "POST /cart/decrement-delete")
     );
     check(del, { "delete ok": (r) => r.status === 302 || r.status === 200 });

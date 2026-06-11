@@ -12,7 +12,8 @@ export function xsrfToken(base) {
   const jar = http.cookieJar();
   const cookies = jar.cookiesForURL(base + "/");
   const vals = cookies["XSRF-TOKEN"];
-  return vals && vals.length > 0 ? vals[0] : null;
+  if (!vals || vals.length === 0) return null;
+  try { return decodeURIComponent(vals[0]); } catch (_) { return vals[0]; }
 }
 
 export function login() {
