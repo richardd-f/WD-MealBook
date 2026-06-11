@@ -16,9 +16,8 @@ import {
   scenarioOptions,
   baseUrl,
   makeHandleSummary,
-  extractToken,
 } from "./lib/common.js";
-import { login } from "./lib/session.js";
+import { login, xsrfToken } from "./lib/session.js";
 
 export const options = scenarioOptions();
 
@@ -33,7 +32,7 @@ function firstMatch(html, re) {
 
 function writeParams(token, tagName) {
   return {
-    headers: { "X-CSRF-TOKEN": token, "X-Requested-With": "XMLHttpRequest" },
+    headers: { "X-XSRF-TOKEN": token, "X-Requested-With": "XMLHttpRequest" },
     redirects: 0,
     tags: { name: tagName },
   };
@@ -52,7 +51,7 @@ export default function () {
     const res = http.get(`${BASE}/menu`, { tags: { name: "GET /menu" } });
     check(res, { "menu 200": (r) => r.status === 200 });
     const html = res.body || "";
-    token = extractToken(html);
+    token = xsrfToken(BASE);
     mealId =
       firstMatch(html, /\/cart\/add\/([A-Za-z0-9\-]+)/) ||
       firstMatch(html, /\/menu\/([A-Za-z0-9\-]+)/);
@@ -77,7 +76,7 @@ export default function () {
     const cart = http.get(`${BASE}/cart`, { tags: { name: "GET /cart" } });
     check(cart, { "cart 200": (r) => r.status === 200 });
     const cartHtml = cart.body || "";
-    token = extractToken(cartHtml) || token;
+    token = xsrfToken(BASE) || token;
     const itemId = firstMatch(
       cartHtml,
       /\/cart\/(?:increment|decrement|remove)\/([A-Za-z0-9\-]+)/
