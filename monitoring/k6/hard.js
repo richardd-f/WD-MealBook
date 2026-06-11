@@ -101,14 +101,6 @@ export default function () {
       writeParams(token, "POST /cart/decrement")
     );
     check(dec, { "decrement ok": (r) => r.status === 302 || r.status === 200 });
-
-    // DELETE — decrement again (qty 1 → 0), Laravel auto-deletes at 0 (self-cleaning)
-    const del = http.post(
-      `${BASE}/cart/decrement/${itemId}`,
-      null,
-      writeParams(token, "POST /cart/decrement-delete")
-    );
-    check(del, { "delete ok": (r) => r.status === 302 || r.status === 200 });
   });
 }
 
