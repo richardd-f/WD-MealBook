@@ -87,7 +87,7 @@ export default function () {
       return;
     }
 
-    // UPDATE +
+    // UPDATE + (qty 1 → 2)
     const inc = http.post(
       `${BASE}/cart/increment/${itemId}`,
       { _token: token },
@@ -95,7 +95,7 @@ export default function () {
     );
     check(inc, { "increment ok": (r) => r.status === 302 || r.status === 200 });
 
-    // UPDATE -
+    // UPDATE - (qty 2 → 1)
     const dec = http.post(
       `${BASE}/cart/decrement/${itemId}`,
       { _token: token },
@@ -103,13 +103,13 @@ export default function () {
     );
     check(dec, { "decrement ok": (r) => r.status === 302 || r.status === 200 });
 
-    // DELETE (cleanup so the run is repeatable)
-    const del = http.del(
-      `${BASE}/cart/remove/${itemId}`,
-      JSON.stringify({ _token: token }),
-      writeParams(token, "DELETE /cart/remove")
+    // DELETE — decrement again (qty 1 → 0), Laravel auto-deletes at 0 (self-cleaning)
+    const del = http.post(
+      `${BASE}/cart/decrement/${itemId}`,
+      { _token: token },
+      writeParams(token, "POST /cart/decrement-delete")
     );
-    check(del, { "remove ok": (r) => r.status === 302 || r.status === 200 });
+    check(del, { "delete ok": (r) => r.status === 302 || r.status === 200 });
   });
 }
 
